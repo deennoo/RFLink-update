@@ -9,14 +9,14 @@ import json
 import xml.etree.ElementTree as ET
 import hashlib
 import shutil
-import psutil
+import platform
 
 
 #ip="192.168.1.254"
 ip="127.0.0.1"
 default_port="8080"
 schema="http"
-dry_run = True
+dry_run = False
 def find_domoticz_port():
     for pid in psutil.pids():
         p = psutil.Process(pid)
@@ -24,6 +24,7 @@ def find_domoticz_port():
             args = p.cmdline()
             return args[args.index('-www')+1]
 try:
+    import psutil
     port = find_domoticz_port()
 except Exception as e:
     port = default_port
@@ -53,7 +54,10 @@ def flash_device(serial_port, filename):
      if not avrdude:
          raise Exception('avrdude command not found')
          sys.exit(1)
-     cmd = '%s -v -v -v -p atmega2560 -c wiring -D -P %s -b 115200 -U flash:w:%s:i' % ( avrdude, serial_port, filename)
+     if platform.system() == 'Windows':
+        cmd = '%s -v -v -v -p atmega2560 -c stk500v2 -D -P %s -b 115200 -U flash:w:%s:i' % ( avrdude, serial_port, filename)
+     else:
+        cmd = '%s -v -v -v -p atmega2560 -c wiring -D -P %s -b 115200 -U flash:w:%s:i' % ( avrdude, serial_port, filename)
      notify('Executing: %s' % cmd)
      if not dry_run:
          subprocess.check_call(shlex.split(cmd))
@@ -78,8 +82,10 @@ for hardware in get_data("type=hardware"):
         notify("Your %s hardware has idx %s in version %s on port %s" % (name, idx, version, serial_port))
 
 
-
-root = ET.parse(urllib2.urlopen("http://www.nemcon.nl/blog2/fw/update.jsp?ver=1.1&rel=%s" % version.split('.')[0])).getroot()
+if platform.system() == 'Windows':
+    root = ET.parse(urllib2.urlopen("http://www.nemcon.nl/blog2/fw/dcz/update.jsp?ver=1.1&rel=%s" % version.split('.')[0])).getroot()
+else:
+    root = ET.parse(urllib2.urlopen("http://www.nemcon.nl/blog2/fw/update.jsp?ver=1.1&rel=%s" % version.split('.')[0])).getroot()
 
 value = root.findall('Value')[0].text
 if value == "0":
