@@ -10,13 +10,15 @@ import xml.etree.ElementTree as ET
 import hashlib
 import shutil
 import psutil
+from pushbullet import Pushbullet
+
+pb = Pushbullet("api_key_pushbullet")
 
 
-#ip="192.168.1.254"
 ip="127.0.0.1"
 default_port="8080"
 schema="http"
-dry_run = True
+dry_run = False
 def find_domoticz_port():
     for pid in psutil.pids():
         p = psutil.Process(pid)
@@ -36,7 +38,7 @@ def enable_harware(status=True):
             'htype':46,
             'port': serial_port,
             'extra': '',
-            'name': name, 
+            'name': name,
             'enabled': str(status).lower(),
             'idx': idx,
             'datatimeout': datatimeout,
@@ -57,10 +59,10 @@ def flash_device(serial_port, filename):
      notify('Executing: %s' % cmd)
      if not dry_run:
          subprocess.check_call(shlex.split(cmd))
-    
+
 def get_data(parameters):
     response = urllib2.urlopen(url+parameters)
-    data = json.load(response)   
+    data = json.load(response)
     if data.has_key("result"):
         return data['result']
 def notify(text):
@@ -82,6 +84,7 @@ for hardware in get_data("type=hardware"):
 root = ET.parse(urllib2.urlopen("http://www.nemcon.nl/blog2/fw/update.jsp?ver=1.1&rel=%s" % version.split('.')[0])).getroot()
 
 value = root.findall('Value')[0].text
+print "Value is "+value
 if value == "0":
     notify("You have the lastest rflink version")
 else:
@@ -91,20 +94,20 @@ else:
     filename = urllib.urlretrieve(url_file)
     if hashlib.md5(open(filename[0], 'rb').read()).hexdigest() == md5:
         shutil.copy(filename[0], "RFLink.cpp.hex")
-        notify('Disabling RFLink Hardware') 
+        notify('Disabling RFLink Hardware')
         enable_harware(False)
-        notify('Flashing RFLink Hardware') 
+        notify('Flashing RFLink Hardware')
         try:
             flash_device(serial_port, 'RFLink.cpp.hex')
             notify('Flashing was successful')
         except Exception as e:
             notify('ERROR: %s' % e)
         finally:
-            notify('Enabling RFLink Hardware') 
+            notify('Enabling RFLink Hardware')
             enable_harware()
 
         notify('Update Done, Thanks using RFLink')
+        pb.push_note("Domoticz", "upgrade DONE")
     else:
         notify("ERROR: MD5 checksum unmatch")
         sys.exit(1)
-
