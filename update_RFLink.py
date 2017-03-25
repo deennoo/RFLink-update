@@ -99,7 +99,6 @@ for hardware in get_data("type=hardware"):
 
 if version == "":
     notify("Error when retrieving RFlink version")
-version = "34"
 root = ET.parse(urllib2.urlopen("http://www.nemcon.nl/blog2/fw/update.jsp?ver=1.1&rel=%s" % version.split('.')[0])).getroot()
 
 value = root.findall('Value')[0].text
