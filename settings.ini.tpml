@@ -1,0 +1,6 @@
+[general]
+ip = 127.0.0.1
+port = 8080
+schema = http
+dry_run = False
+#pushbullet_key=xxxxxxxxxxxxxxxxx

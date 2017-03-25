@@ -1,36 +1,49 @@
 #!/usr/bin/python2
-import urllib2
-import shlex, subprocess
-import urllib
-from distutils import spawn
-import os
-import sys
-import json
-import xml.etree.ElementTree as ET
+import ConfigParser
 import hashlib
+import json
+import os
+import shlex
 import shutil
-import psutil
-from pushbullet import Pushbullet
+import subprocess
+import sys
+import urllib
+import urllib2
+import xml.etree.ElementTree as ET
+from distutils import spawn
 
-pb = Pushbullet("api_key_pushbullet")
 
-
-ip="127.0.0.1"
-default_port="8080"
-schema="http"
-dry_run = False
 def find_domoticz_port():
+    import psutil
     for pid in psutil.pids():
         p = psutil.Process(pid)
         if "domoticz" in p.name():
             args = p.cmdline()
             return args[args.index('-www')+1]
-try:
+
+
+config = ConfigParser.ConfigParser()
+current_dir = os.path.dirname(os.path.realpath(__file__))
+config_file = os.path.join(current_dir, 'settings.ini')
+config.readfp(open(config_file))
+
+ip = config.get('general', 'ip')
+if config.has_option('general', 'port'):
+    port = config.get('general', 'port')
+else:
     port = find_domoticz_port()
-except Exception as e:
-    port = default_port
+
+schema = config.get('general', 'schema')
+dry_run = config.getboolean('general', 'dry_run')
+
+if config.has_option('general', 'pushbullet_key'):
+    pushbullet_key = config.get('general', 'pushbullet_key')
+    from pushbullet import Pushbullet
+
+    pushbullet = Pushbullet(pushbullet_key)
 
 url = "%s://%s:%s/json.htm?" % (schema, ip, port)
+
 
 def enable_harware(status=True):
     data = { 'type':'command',
@@ -50,6 +63,7 @@ def enable_harware(status=True):
             'Mode6':0, }
     urllib2.urlopen(url+urllib.urlencode(data))
 
+
 def flash_device(serial_port, filename):
      avrdude =  spawn.find_executable('avrdude')
      if not avrdude:
@@ -60,14 +74,18 @@ def flash_device(serial_port, filename):
      if not dry_run:
          subprocess.check_call(shlex.split(cmd))
 
+
 def get_data(parameters):
     response = urllib2.urlopen(url+parameters)
     data = json.load(response)
     if data.has_key("result"):
         return data['result']
+
+
 def notify(text):
-  print text
-  urllib2.urlopen(url+"type=command&param=addlogmessage&message="+urllib.quote("--- RFLINK UPDATE --- %s" % (text)))
+    print text
+    urllib2.urlopen(
+        url + "type=command&param=addlogmessage&message=" + urllib.quote("--- RFLINK UPDATE --- %s" % (text)))
 
 
 for hardware in get_data("type=hardware"):
@@ -79,16 +97,18 @@ for hardware in get_data("type=hardware"):
         datatimeout = hardware['DataTimeout']
         notify("Your %s hardware has idx %s in version %s on port %s" % (name, idx, version, serial_port))
 
-
-
+if version == "":
+    notify("Error when retrieving RFlink version")
+version = "34"
 root = ET.parse(urllib2.urlopen("http://www.nemcon.nl/blog2/fw/update.jsp?ver=1.1&rel=%s" % version.split('.')[0])).getroot()
 
 value = root.findall('Value')[0].text
-print "Value is "+value
 if value == "0":
-    notify("You have the lastest rflink version")
+    notify("You have the latest rflink version")
+elif value == "":
+    notify("Error when retrieving last rflink version")
 else:
-    notify("Download the lastest rflink version")
+    notify("Download the latest rflink version")
     url_file = root.findall('Url')[0].text
     md5 = root.findall('MD5')[0].text
     filename = urllib.urlretrieve(url_file)
@@ -105,9 +125,11 @@ else:
         finally:
             notify('Enabling RFLink Hardware')
             enable_harware()
+        os.unlink('RFLink.cpp.hex')
 
         notify('Update Done, Thanks using RFLink')
-        pb.push_note("Domoticz", "upgrade DONE")
+        if "pushbullet" in globals():
+            pushbullet.push_note("Domoticz", "Upgrade DONE")
     else:
-        notify("ERROR: MD5 checksum unmatch")
+        notify("ERROR: MD5 checksum unmatched")
         sys.exit(1)
