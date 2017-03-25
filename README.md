@@ -35,7 +35,7 @@ Edit settings.ini with your own variables
 You can use this website to generate a crontab http://crontab-generator.org/
 
 # Extra variables
-you need need to install pip https://pip.pypa.io/en/stable/installing/
+you need to install pip https://pip.pypa.io/en/stable/installing/
 
 * If you want to have pushbullet notification
 
@@ -45,5 +45,6 @@ you can edit settings.ini and add your pushbullet api key
 
 * If you are note sure about domoticz port
 
-  
+you can edit settings.ini and comment port variable with #
+
     pip install psutil
