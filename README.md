@@ -6,15 +6,16 @@ shell script to update RFLink
 You need to have Python 2.7 installed
 On debian/ubuntu platform:
 
-    apt-get install python python2.7
+    apt-get install python2.7 avrdude 
     
 On Fedora/Centos platform:
 
-    yum install python27 
+    yum install python27  avrdude
 
 On Windows platform:
 
- get latest msi file from https://www.python.org/downloads/release/python-2713/
+ * get latest msi file from https://www.python.org/downloads/release/python-2713/
+ * get latest avrdude file from http://download.savannah.gnu.org/releases/avrdude/
  
 Download latest version:
 
