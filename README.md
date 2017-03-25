@@ -11,6 +11,10 @@ On debian/ubuntu platform:
 On Fedora/Centos platform:
 
     yum install python27  avrdude
+    
+On Archlinux platform:
+
+    pacman -Sy python2 avrdude
 
 On Windows platform:
 
